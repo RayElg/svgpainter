@@ -1,0 +1,10 @@
+__pycache__/
+data/
+runs/
+out/
+weights/
+web/model/
+web/vendor/
+web/node_modules/
+web/test/*.bin
+web/test/expect.json

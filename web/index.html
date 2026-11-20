@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SVG Painter</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <header class="masthead">
+    <div class="brand">
+      <h1>SVG Painter</h1>
+      <p>Paints any image as layered SVG shapes from the full canvas down to 16x tiles, locally in your browser.</p>
+    </div>
+    <div class="runtime-box">
+      <div class="runtime-row">
+        <span class="badge" id="backend">Runtime: loading model…</span>
+        <select id="engine" aria-label="Execution backend" title="Switch execution backend" disabled>
+          <option value="webgpu">WebGPU + WASM</option>
+          <option value="wasm">WASM (CPU)</option>
+        </select>
+      </div>
+      <span class="runtime-sub" id="runtimeSub"></span>
+      <div class="load-bar" id="prog"><div></div></div>
+    </div>
+  </header>
+
+  <section class="picker-bar" aria-label="Image selection">
+    <div class="pick" id="pick">
+      <span class="pick-label">Samples:</span>
+    </div>
+    <label class="file-btn">Upload image…<input type="file" id="file" accept="image/*"></label>
+  </section>
+
+  <div class="stage-toolbar">
+    <div class="seg" role="tablist" aria-label="View mode">
+      <button type="button" class="active" data-mode="side" role="tab" aria-selected="true">Side by Side</button>
+      <button type="button" data-mode="swipe" role="tab" aria-selected="false">Swipe Compare</button>
+      <button type="button" data-mode="solo" role="tab" aria-selected="false">Canvas Only</button>
+    </div>
+    <div class="view-toggles">
+      <label class="opt"><input type="checkbox" id="showTile" checked> Show zoom box</label>
+      <label class="opt"><input type="checkbox" id="animStrokes" checked> Smooth strokes</label>
+      <label class="opt"><input type="checkbox" id="sharpen" checked> Edge refinement</label>
+    </div>
+  </div>
+
+  <section class="stage" id="stage">
+    <figure class="frame frame-ref">
+      <figcaption>
+        <span>Target Image</span>
+        <span class="meta">512 × 512</span>
+      </figcaption>
+      <div class="pane" id="refPane">
+        <canvas id="ref" width="512" height="512"></canvas>
+        <div class="drop" id="dropHint">Pick a sample above, drop an image here, or paste from clipboard</div>
+        <div class="tile" id="tileA"><span class="tile-tag" id="tileTagA"></span></div>
+      </div>
+    </figure>
+
+    <figure class="frame frame-svg">
+      <figcaption>
+        <span>Live SVG</span>
+        <span class="meta" id="svgInfo">Ready</span>
+      </figcaption>
+      <div class="pane" id="svgPane">
+        <svg id="svg" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+          <defs id="defs"></defs>
+          <rect width="512" height="512" fill="#fff"/>
+          <g id="els"></g>
+        </svg>
+        <div class="swipe-overlay" id="swipeOverlay">
+          <canvas class="swipe-ref-canvas" id="swipeRef" width="512" height="512"></canvas>
+          <span class="swipe-label left">Target</span>
+          <span class="swipe-label right">SVG</span>
+          <div class="swipe-divider" id="swipeDivider" title="Drag to compare">
+            <div class="swipe-handle">↔</div>
+          </div>
+        </div>
+        <div class="tile" id="tileB"><span class="tile-tag" id="tileTagB"></span></div>
+      </div>
+    </figure>
+  </section>
+
+  <section class="controls" aria-label="Playback controls">
+    <div class="controls-row">
+      <button type="button" class="ctl primary" id="play" disabled>Play</button>
+      <button type="button" class="ctl step" id="stepBack" disabled title="Previous shape (Left Arrow)">‹</button>
+      <button type="button" class="ctl step" id="stepFwd" disabled title="Next shape (Right Arrow)">›</button>
+
+      <div class="scrubber-wrap">
+        <div class="scrubber-track">
+          <div class="scrubber-buf" id="scrubBuf"></div>
+          <div class="scrubber-played" id="scrubPlayed"></div>
+        </div>
+        <input type="range" id="pos" min="0" max="0" value="0" step="1" aria-label="Shapes shown">
+      </div>
+
+      <label class="opt">Speed
+        <select id="speed">
+          <option value="live" selected>Live</option>
+          <option value="4">4 / s</option>
+          <option value="16">16 / s</option>
+          <option value="48">48 / s</option>
+          <option value="120">120 / s</option>
+        </select>
+      </label>
+
+      <label class="opt">Max zoom
+        <select id="depth">
+          <option value="4">4×</option>
+          <option value="8">8×</option>
+          <option value="16" selected>16×</option>
+          <option value="32">32×</option>
+        </select>
+      </label>
+
+      <button type="button" class="ctl" id="restart" disabled>Restart</button>
+      <button type="button" class="ctl" id="save" disabled>Download SVG</button>
+    </div>
+  </section>
+
+  <section class="inspector">
+    <div class="card">
+      <h2 class="card-title">
+        <span>Active Tile Closeup</span>
+        <span class="sub" id="loupeLabel">Full canvas</span>
+      </h2>
+      <div class="loupe-pair">
+        <div>
+          <div class="loupe-box"><canvas id="zoomRef" width="160" height="160"></canvas></div>
+          <div class="loupe-cap">Target</div>
+        </div>
+        <div>
+          <div class="loupe-box">
+            <svg id="zoomSvg" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+              <rect width="512" height="512" fill="#fff"/>
+              <use href="#els"/>
+            </svg>
+          </div>
+          <div class="loupe-cap">SVG</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 class="card-title">
+        <span>Decoding Progress</span>
+        <span class="sub" id="psnrPeak">PSNR curve</span>
+      </h2>
+      <div class="chart-wrap">
+        <canvas id="chart" width="600" height="82"></canvas>
+      </div>
+      <div class="stats-grid">
+        <div class="stat-item"><span class="k">Shapes</span><span class="v"><span id="count">0</span> / <span id="made">0</span></span></div>
+        <div class="stat-item"><span class="k">Current View</span><span class="v" id="view">–</span></div>
+        <div class="stat-item"><span class="k">Quality (PSNR)</span><span class="v" id="psnr">–</span></div>
+        <div class="stat-item"><span class="k">Decode Speed</span><span class="v" id="rate">–</span><span class="sub-v" id="rateSub"></span></div>
+      </div>
+      <div class="shape-mix" id="shapeMix">
+        <span>rect <b id="mix0">0</b></span>
+        <span>ellipse <b id="mix1">0</b></span>
+        <span>triangle <b id="mix2">0</b></span>
+        <span>curve <b id="mix3">0</b></span>
+        <span>blob <b id="mix4">0</b></span>
+      </div>
+    </div>
+  </section>
+
+  <div class="msg" id="msg"></div>
+
+  <footer class="credit">
+    <span>Space: play/pause · ←/→: step one shape · Drop or paste any image to paint it</span>
+    <span>Samples: <a href="https://github.com/jdecked/twemoji">Twemoji</a> (CC BY 4.0); balloon by ISO Republic &amp; macaw by Jebulon (CC0, Wikimedia Commons).</span>
+  </footer>
+</main>
+<script type="module" src="js/app.mjs"></script>
+</body>
+</html>

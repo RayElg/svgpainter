@@ -1,0 +1,7 @@
+torch>=2.4
+numpy
+pillow
+resvg-py
+lpips
+onnx
+onnxruntime

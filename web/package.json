@@ -1,0 +1,10 @@
+{
+  "name": "svg-painter-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "postinstall": "mkdir -p vendor/ort && cp node_modules/onnxruntime-web/dist/ort.webgpu.min.mjs* node_modules/onnxruntime-web/dist/ort-wasm-simd-threaded.* vendor/ort/",
+    "test": "node test/run_node.mjs"
+  },
+  "devDependencies": { "onnxruntime-node": "1.31.1", "onnxruntime-web": "1.31.1" }
+}
