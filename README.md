@@ -69,6 +69,8 @@ Run `python -m tests.test_core` to check grammar round-trips, rasterizer parity 
 
 ## Licenses & Credits
 
+This project is licensed under the [MIT License](LICENSE.md).
+
 - **Twemoji** (`jdecked/twemoji` 15.1): CC BY 4.0, © Twitter, Inc and other contributors.
 - **COCO**: Flickr photos under their respective licenses ([cocodataset.org](https://cocodataset.org)). Datasets are not bundled.
 - **Sample images:** 4 Twemoji graphics (CC BY 4.0), plus [Hot Air Balloon over Lake](https://commons.wikimedia.org/wiki/File:Hot_Air_Balloon_over_Lake.jpg) (ISO Republic, CC0) and [Ara ararauna portrait Rhodes](https://commons.wikimedia.org/wiki/File:Ara_ararauna_portrait_Rhodes.jpg) (Jebulon, CC0).
